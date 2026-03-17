@@ -1,0 +1,181 @@
+1. Temperature Sensor (DHT11 / DHT22)
+✅ Arduino Code
+#include <DHT.h>
+
+#define DHTPIN 2
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+}
+
+void loop() {
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+
+  Serial.print("Temp: ");
+  Serial.print(temp);
+  Serial.print(" °C  Humidity: ");
+  Serial.println(hum);
+
+  delay(2000);
+}
+
+💡 2. Light Sensor (LDR)
+int ldrPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int value = analogRead(ldrPin);
+  Serial.println(value);
+  delay(500);
+}
+________________________________________
+🚶 3. PIR Motion Sensor
+int pirPin = 3;
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int motion = digitalRead(pirPin);
+
+  if (motion == HIGH) {
+    Serial.println("Motion Detected!");
+  } else {
+    Serial.println("No Motion");
+  }
+
+  delay(1000);
+}
+________________________________________
+📏 4. Ultrasonic Sensor (HC-SR04)
+int trig = 9;
+int echo = 10;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+}
+
+void loop() {
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+
+  long duration = pulseIn(echo, HIGH);
+  float distance = duration * 0.034 / 2;
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  delay(500);
+}
+________________________________________
+🌧️ 5. Rain Sensor
+int rainPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int rainValue = analogRead(rainPin);
+
+  Serial.print("Rain Value: ");
+  Serial.println(rainValue);
+
+  delay(500);
+}
+________________________________________
+🔥 6. Flame Sensor
+int flamePin = 4;
+
+void setup() {
+  pinMode(flamePin, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (digitalRead(flamePin) == LOW) {
+    Serial.println("🔥 Fire Detected!");
+  } else {
+    Serial.println("No Fire");
+  }
+  delay(500);
+}
+________________________________________
+🌫️ 7. Gas Sensor (MQ-2)
+int gasPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int gasValue = analogRead(gasPin);
+  Serial.println(gasValue);
+  delay(500);
+}
+________________________________________
+💧 8. Soil Moisture Sensor
+int soilPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int moisture = analogRead(soilPin);
+
+  Serial.print("Moisture: ");
+  Serial.println(moisture);
+
+  delay(500);
+}
+________________________________________
+🎤 9. Sound Sensor
+int soundPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int sound = analogRead(soundPin);
+  Serial.println(sound);
+  delay(200);
+}
+________________________________________
+🧲 10. IR Obstacle Sensor
+int irPin = 7;
+
+void setup() {
+  pinMode(irPin, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int val = digitalRead(irPin);
+
+  if (val == LOW) {
+    Serial.println("Obstacle Detected");
+  } else {
+    Serial.println("Clear");
+  }
+
+  delay(500);
+}
+
