@@ -1,6 +1,6 @@
 1. Temperature Sensor (DHT11 / DHT22)
 
-#include <DHT.h>
+#include <DHT.h
 
 #define DHTPIN 2
 #define DHTTYPE DHT11
