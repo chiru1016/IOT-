@@ -36,7 +36,7 @@ void loop() {
   Serial.println(value);
   delay(500);
 }
-________________________________________
+___________________
 🚶 3. PIR Motion Sensor
 int pirPin = 3;
 
