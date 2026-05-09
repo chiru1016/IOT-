@@ -1,0 +1,51 @@
+from gpiozero import LED, Button
+from time import sleep
+
+from luma.core.interface.serial import i2c
+from luma.oled.device import ssd1306
+from PIL import ImageDraw, Image
+
+# LEDs
+red = LED(17)
+blue = LED(27)
+
+# Button
+button = Button(2)
+
+# OLED setup
+serial = i2c(port=1, address=0x3C)
+device = ssd1306(serial)
+
+state = 0
+
+def show_text(text):
+    image = Image.new("1", (128, 64))
+    draw = ImageDraw.Draw(image)
+
+    draw.text((10, 25), text, fill=255)
+
+    device.display(image)
+
+# Initial display
+show_text("System Ready")
+
+while True:
+    button.wait_for_press()
+
+    if state == 0:
+        red.on()
+        blue.off()
+
+        show_text("RED LED ON")
+
+        state = 1
+
+    else:
+        red.off()
+        blue.on()
+
+        show_text("BLUE LED ON")
+
+        state = 0
+
+    sleep(0.3)
