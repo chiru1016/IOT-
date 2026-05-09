@@ -1,0 +1,23 @@
+from gpiozero import LED, Button
+from time import sleep
+
+red = LED(17)
+blue = LED(27)
+
+button = Button(2)
+
+state = 0
+
+while True:
+    button.wait_for_press()
+
+    if state == 0:
+        red.on()
+        blue.off()
+        state = 1
+    else:
+        red.off()
+        blue.on()
+        state = 0
+
+    sleep(0.3)
