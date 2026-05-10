@@ -1,4 +1,4 @@
-// ESP32 + Relay Module + LED
+Relay Module + LED
 
 #define RELAY 23   // Relay IN pin connected to GPIO23
 
