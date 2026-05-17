@@ -6,7 +6,7 @@ void setup() {
 
   pinMode(RELAY, OUTPUT);
 
-  // Relay OFF initially
+  // Relay OFF
   digitalWrite(RELAY, HIGH);
 
 }
@@ -18,7 +18,7 @@ void loop() {
 
   delay(2000);
 
-  // Turn OFF relay (LED OFF)
+  // Turn
   digitalWrite(RELAY, HIGH);
 
   delay(2000);
