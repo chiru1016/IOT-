@@ -6,7 +6,7 @@ void setup() {
 
   pinMode(RELAY, OUTPUT);
 
-  // Relay OFF
+  
   digitalWrite(RELAY, HIGH);
 
 }
