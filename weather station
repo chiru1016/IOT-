@@ -12,7 +12,7 @@
 #include <Adafruit_BMP085.h>
 
 // WiFi
-char ssid[] = "iotdemo";
+char ssid[] = "iotdemo";    //wifi name
 char pass[] = "password123";
 
 // MQTT Raspberry Pi
