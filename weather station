@@ -13,7 +13,7 @@
 
 // WiFi
 char ssid[] = "iotdemo";    //wifi name
-char pass[] = "password123";
+char pass[] = "password123"; //wifi password
 
 // MQTT Raspberry Pi
 const char* mqtt_server = "192.168.1.25";   // CHANGE THIS to your RPi IP
