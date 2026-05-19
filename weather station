@@ -1,0 +1,222 @@
+#define BLYNK_TEMPLATE_ID "TMPL3Avopbech"
+#define BLYNK_TEMPLATE_NAME "Weather Station"
+#define BLYNK_AUTH_TOKEN "nQk4JelKKyfVRz3_ORFYwsbpyBEkRdcg"
+
+#define BLYNK_PRINT Serial
+
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <PubSubClient.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
+
+// WiFi
+char ssid[] = "iotdemo";
+char pass[] = "password123";
+
+// MQTT Raspberry Pi
+const char* mqtt_server = "192.168.1.25";   // CHANGE THIS to your RPi IP
+const int mqtt_port = 1883;
+const char* mqtt_topic = "weather/station";
+
+// WiFi + MQTT clients
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
+// DHT11
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// BMP180
+Adafruit_BMP085 bmp;
+
+// Wind direction sensors
+#define NORTH_PIN 26
+#define EAST_PIN  27
+#define SOUTH_PIN 25
+#define WEST_PIN  33
+
+// Wind speed sensor
+#define WIND_PIN 32
+
+// Rain sensor
+#define RAIN_PIN 14     // Use GPIO 14, not GPIO 35
+
+const float RAIN_TIP = 0.637;
+
+volatile long pulseCount = 0;
+
+unsigned long lastMillis = 0;
+unsigned long lastTipTime = 0;
+
+float totalRainfall = 0;
+int tipcount = 0;
+
+bool lastRainState = HIGH;
+
+BlynkTimer timer;
+
+void IRAM_ATTR countPulse() {
+  pulseCount++;
+}
+
+void reconnectMQTT() {
+  while (!mqttClient.connected()) {
+    Serial.print("Connecting to MQTT... ");
+
+    if (mqttClient.connect("ESP32_WeatherStation")) {
+      Serial.println("connected");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.println(mqttClient.state());
+      delay(2000);
+    }
+  }
+}
+
+void checkRainTip() {
+  bool currentRainState = digitalRead(RAIN_PIN);
+
+  // Count only when magnet goes away: LOW to HIGH
+  if (lastRainState == LOW && currentRainState == HIGH) {
+    if (millis() - lastTipTime > 500) {
+      tipcount++;
+      lastTipTime = millis();
+
+      Serial.print("Tip Count: ");
+      Serial.println(tipcount);
+    }
+  }
+
+  lastRainState = currentRainState;
+
+  // Reset rainfall if no tip for 60 seconds
+  if (tipcount > 0 && millis() - lastTipTime > 60000) {
+    tipcount = 0;
+    totalRainfall = 0;
+    Serial.println("Rain stopped. Rainfall reset.");
+  }
+}
+
+void sendData() {
+  float temp = dht.readTemperature();
+  float hum  = dht.readHumidity();
+
+  if (isnan(temp) || isnan(hum)) {
+    Serial.println("DHT11 reading failed");
+    return;
+  }
+
+  totalRainfall = tipcount * RAIN_TIP;
+
+  float pressure = bmp.readPressure() / 100.0;
+
+  bool N = digitalRead(NORTH_PIN) == LOW;
+  bool E = digitalRead(EAST_PIN)  == LOW;
+  bool S = digitalRead(SOUTH_PIN) == LOW;
+  bool W = digitalRead(WEST_PIN)  == LOW;
+
+  int active = N + E + S + W;
+  String direction = "Unknown";
+
+  if (active == 0) direction = "No Wind";
+  else if (active > 2) direction = "Invalid";
+  else if (N && !E && !S && !W) direction = "North";
+  else if (!N && E && !S && !W) direction = "East";
+  else if (!N && !E && S && !W) direction = "South";
+  else if (!N && !E && !S && W) direction = "West";
+  else if (N && E && !S && !W) direction = "North East";
+  else if (!N && E && S && !W) direction = "South East";
+  else if (!N && !E && S && W) direction = "South West";
+  else if (N && !E && !S && W) direction = "North West";
+
+  float speedKph = 0;
+
+  if (millis() - lastMillis >= 1000) {
+    detachInterrupt(digitalPinToInterrupt(WIND_PIN));
+
+    int currentPulses = pulseCount;
+    pulseCount = 0;
+    lastMillis = millis();
+
+    attachInterrupt(digitalPinToInterrupt(WIND_PIN), countPulse, FALLING);
+
+    speedKph = currentPulses * 2.4;
+  }
+
+  // Send to Blynk
+  Blynk.virtualWrite(V0, temp);
+  Blynk.virtualWrite(V1, hum);
+  Blynk.virtualWrite(V2, pressure);
+  Blynk.virtualWrite(V3, direction);
+  Blynk.virtualWrite(V4, speedKph);
+  Blynk.virtualWrite(V5, totalRainfall);
+
+  // Send to MQTT
+  String payload = "{";
+  payload += "\"temp\":" + String(temp, 2) + ",";
+  payload += "\"hum\":" + String(hum, 2) + ",";
+  payload += "\"pressure\":" + String(pressure, 2) + ",";
+  payload += "\"wind\":\"" + direction + "\",";
+  payload += "\"speed\":" + String(speedKph, 2) + ",";
+  payload += "\"rain\":" + String(totalRainfall, 2);
+  payload += "}";
+
+  mqttClient.publish(mqtt_topic, payload.c_str());
+
+  // Serial output
+  Serial.println("------");
+  Serial.print("Temp: "); Serial.println(temp);
+  Serial.print("Humidity: "); Serial.println(hum);
+  Serial.print("Pressure: "); Serial.println(pressure);
+  Serial.print("Direction: "); Serial.println(direction);
+  Serial.print("Wind Speed: "); Serial.print(speedKph); Serial.println(" km/h");
+  Serial.print("Rain Tips: "); Serial.println(tipcount);
+  Serial.print("Rain Fall: "); Serial.print(totalRainfall); Serial.println(" mm");
+  Serial.print("MQTT Payload: "); Serial.println(payload);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  dht.begin();
+
+  if (!bmp.begin()) {
+    Serial.println("BMP ERROR");
+  }
+
+  pinMode(NORTH_PIN, INPUT);
+  pinMode(EAST_PIN, INPUT);
+  pinMode(SOUTH_PIN, INPUT);
+  pinMode(WEST_PIN, INPUT);
+
+  pinMode(WIND_PIN, INPUT_PULLUP);
+  pinMode(RAIN_PIN, INPUT_PULLUP);
+
+  lastRainState = digitalRead(RAIN_PIN);
+
+  attachInterrupt(digitalPinToInterrupt(WIND_PIN), countPulse, FALLING);
+
+  // Connect to Blynk and WiFi
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  // MQTT server on Raspberry Pi
+  mqttClient.setServer(mqtt_server, mqtt_port);
+
+  timer.setInterval(2000L, sendData);
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
+
+  if (!mqttClient.connected()) {
+    reconnectMQTT();
+  }
+
+  mqttClient.loop();
+
+  checkRainTip();
+}
