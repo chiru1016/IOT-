@@ -1,5 +1,5 @@
 relay with 250 volt bulb
-
+(blink)
 #define RELAY_PIN 5   // GPIO connected to IN4
 
 void setup() {
