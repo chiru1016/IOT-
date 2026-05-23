@@ -1,0 +1,256 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ESP32Servo.h>
+#include <ESP_Mail_Client.h>
+
+// ================= WIFI DETAILS =================
+#define WIFI_SSID "YOUR_WIFI_NAME"
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+
+// ================= FIREBASE URL =================
+// Do not put / at the end
+#define FIREBASE_URL "https://smartlocker-d62fd-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+// ================= EMAIL DETAILS =================
+#define SMTP_HOST "smtp.gmail.com"
+#define SMTP_PORT 465
+
+#define AUTHOR_EMAIL "your_email@gmail.com"
+#define AUTHOR_PASSWORD "your_gmail_app_password"
+#define RECIPIENT_EMAIL "receiver_email@gmail.com"
+
+// ================= PINS =================
+#define SERVO_PIN 18
+#define BUZZER_PIN 23
+
+// ================= SERVO ANGLES =================
+#define LOCK_ANGLE 0
+#define UNLOCK_ANGLE 90
+
+Servo lockerServo;
+SMTPSession smtp;
+
+// Change locker password here
+String correctPassword = "1234";
+
+int wrongAttempts = 0;
+bool lockerLocked = true;
+
+unsigned long lastCheckTime = 0;
+const unsigned long checkInterval = 1500;
+
+void smtpCallback(SMTP_Status status);
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  lockerServo.attach(SERVO_PIN);
+  lockLocker();
+
+  connectWiFi();
+
+  smtp.callback(smtpCallback);
+
+  updateFirebaseString("status", "System Ready - Locker Locked");
+  updateFirebaseInt("attempts", 0);
+  updateFirebaseString("command", "");
+  updateFirebaseString("entered_password", "");
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    connectWiFi();
+  }
+
+  if (millis() - lastCheckTime >= checkInterval) {
+    lastCheckTime = millis();
+
+    String command = getFirebaseString("command");
+
+    if (command == "CHECK_PASSWORD") {
+      String enteredPassword = getFirebaseString("entered_password");
+
+      checkPassword(enteredPassword);
+
+      updateFirebaseString("command", "");
+      updateFirebaseString("entered_password", "");
+    }
+
+    if (command == "LOCK") {
+      lockLocker();
+
+      updateFirebaseString("status", "Locker Locked");
+      updateFirebaseString("command", "");
+    }
+  }
+}
+
+// ================= WIFI FUNCTION =================
+
+void connectWiFi() {
+  Serial.print("Connecting to WiFi");
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  Serial.println();
+  Serial.println("WiFi Connected");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+// ================= PASSWORD CHECK =================
+
+void checkPassword(String enteredPassword) {
+  enteredPassword.trim();
+
+  Serial.print("Entered Password: ");
+  Serial.println(enteredPassword);
+
+  if (enteredPassword == correctPassword) {
+    wrongAttempts = 0;
+
+    unlockLocker();
+
+    updateFirebaseString("status", "Access Granted - Locker Unlocked");
+    updateFirebaseInt("attempts", wrongAttempts);
+
+    Serial.println("Access Granted");
+  } 
+  else {
+    wrongAttempts++;
+
+    updateFirebaseString("status", "Wrong Password");
+    updateFirebaseInt("attempts", wrongAttempts);
+
+    beepBuzzer(2);
+
+    Serial.println("Wrong Password");
+
+    if (wrongAttempts >= 3) {
+      updateFirebaseString("status", "SECURITY ALERT - 3 Wrong Attempts");
+
+      digitalWrite(BUZZER_PIN, HIGH);
+
+      sendEmailAlert();
+
+      delay(3000);
+
+      digitalWrite(BUZZER_PIN, LOW);
+
+      wrongAttempts = 0;
+      updateFirebaseInt("attempts", wrongAttempts);
+    }
+  }
+}
+
+// ================= SERVO FUNCTIONS =================
+
+void lockLocker() {
+  lockerServo.write(LOCK_ANGLE);
+  lockerLocked = true;
+
+  Serial.println("Locker Locked");
+}
+
+void unlockLocker() {
+  lockerServo.write(UNLOCK_ANGLE);
+  lockerLocked = false;
+
+  Serial.println("Locker Unlocked");
+}
+
+// ================= BUZZER FUNCTION =================
+
+void beepBuzzer(int times) {
+  for (int i = 0; i < times; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(200);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(200);
+  }
+}
+
+// ================= FIREBASE GET =================
+
+String getFirebaseString(String tag) {
+  HTTPClient http;
+
+  String url = String(FIREBASE_URL) + "/smart_locker/" + tag + ".json";
+
+  http.begin(url);
+
+  int httpCode = http.GET();
+
+  String payload = "";
+
+  if (httpCode > 0) {
+    payload = http.getString();
+
+    payload.replace("\"", "");
+    payload.trim();
+
+    Serial.println("Firebase GET " + tag + ": " + payload);
+  } 
+  else {
+    Serial.println("Firebase GET failed for " + tag);
+  }
+
+  http.end();
+
+  return payload;
+}
+
+// ================= FIREBASE UPDATE STRING =================
+
+void updateFirebaseString(String tag, String value) {
+  HTTPClient http;
+
+  String url = String(FIREBASE_URL) + "/smart_locker/" + tag + ".json";
+  String data = "\"" + value + "\"";
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpCode = http.PUT(data);
+
+  if (httpCode > 0) {
+    Serial.println("Firebase updated: " + tag + " = " + value);
+  } 
+  else {
+    Serial.println("Firebase update failed for " + tag);
+  }
+
+  http.end();
+}
+
+// ================= FIREBASE UPDATE INTEGER =================
+
+void updateFirebaseInt(String tag, int value) {
+  HTTPClient http;
+
+  String url = String(FIREBASE_URL) + "/smart_locker/" + tag + ".json";
+  String data = String(value);
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpCode = http.PUT(data);
+
+  if (httpCode > 0) {
+    Serial.println("Firebase updated: " + tag + " = " + String(value));
+  } 
+  else {
+    Serial.println("Firebase update failed for " + tag);
+  }
+
+  http.end();
+}
+
