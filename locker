@@ -300,4 +300,4 @@ void sendEmailAlert() {
 
 void smtpCallback(SMTP_Status status) {
   Serial.println(status.info());
-}
+
