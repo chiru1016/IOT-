@@ -253,4 +253,51 @@ void updateFirebaseInt(String tag, int value) {
 
   http.end();
 }
+// ================= EMAIL ALERT =================
 
+void sendEmailAlert() {
+  Session_Config config;
+
+  config.server.host_name = SMTP_HOST;
+  config.server.port = SMTP_PORT;
+
+  config.login.email = AUTHOR_EMAIL;
+  config.login.password = AUTHOR_PASSWORD;
+  config.login.user_domain = "";
+
+  SMTP_Message message;
+
+  message.sender.name = "ESP32 Smart Locker";
+  message.sender.email = AUTHOR_EMAIL;
+
+  message.subject = "SECURITY ALERT: Wrong Password Attempts";
+  message.addRecipient("User", RECIPIENT_EMAIL);
+
+  String body = "Security Alert!\n\n";
+  body += "Three wrong password attempts were detected on the smart locker.\n\n";
+  body += "Please check the locker immediately.\n\n";
+  body += "Device: IoT Smart Locker Security System";
+
+  message.text.content = body.c_str();
+  message.text.charSet = "us-ascii";
+  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+
+  if (!smtp.connect(&config)) {
+    Serial.println("SMTP connection failed");
+    return;
+  }
+
+  if (!MailClient.sendMail(&smtp, &message)) {
+    Serial.println("Email sending failed");
+    Serial.println(smtp.errorReason());
+  } 
+  else {
+    Serial.println("Email sent successfully");
+  }
+
+  smtp.closeSession();
+}
+
+void smtpCallback(SMTP_Status status) {
+  Serial.println(status.info());
+}
