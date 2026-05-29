@@ -1,4 +1,4 @@
-Relay Module + LED
+Relay + LED
 
 #define RELAY 23   // Relay IN pin connected to GPIO23
 
