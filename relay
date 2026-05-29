@@ -18,7 +18,7 @@ void loop() {
 
   delay(2000);
 
-  // Turn
+  // Turn off relay
   digitalWrite(RELAY, HIGH);
 
   delay(2000);
