@@ -1,0 +1,11 @@
+Smartphone Signal / Activity
+          ↓
+RF Detector / WiFi-Bluetooth Scanner
+          ↓
+ESP32
+    ↓        ↓        ↓
+  Buzzer    LED    Firebase
+                     ↓
+              MIT App Dashboard
+                     ↓
+               Email Alert
