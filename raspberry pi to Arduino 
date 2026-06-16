@@ -13,7 +13,7 @@ void setup() {
   Serial.begin(9600);
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    while(true); // stop if 
+    while(true); 
   }
 
   display.clearDisplay();
