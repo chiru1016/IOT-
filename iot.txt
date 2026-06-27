@@ -57,7 +57,7 @@ void loop() {
 
   delay(1000);
 }
-___________________________
+___________
 📏 4. Ultrasonic Sensor (HC-SR04)
 int trig = 9;
 int echo = 10;
