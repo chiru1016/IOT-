@@ -3,7 +3,7 @@
 #include <ESP32Servo.h>
 #include <ESP_Mail_Client.h>
 
-// ================= WIFI DETAILS =================
+// ================= WIFI DETAILS... =================
 #define WIFI_SSID "YOUR_WIFI_NAME"
 #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
 
