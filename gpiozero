@@ -25,7 +25,7 @@ def show_text(text):
 
     device.display(image)
 
-# Initial display
+# Initial d
 show_text("System Ready")
 
 while True:
