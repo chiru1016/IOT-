@@ -7,8 +7,6 @@ from PIL import ImageDraw, Image
 
 red = LED(17)
 blue = LED(27)
-
-# Button
 button = Button(2)
 
 # OLED setup
