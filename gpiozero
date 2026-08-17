@@ -9,7 +9,6 @@ red = LED(17)
 blue = LED(27)
 button = Button(2)
 
-# OLED setup
 serial = i2c(port=1, address=0x3C)
 device = ssd1306(serial)
 
